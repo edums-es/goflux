@@ -1,0 +1,1653 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>n8nDash v2 — All Widgets Configurable (v3.1)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>window.addEventListener('error',()=>{ if(!window.Chart){ window.Chart=function(){return{destroy(){}}}; }},{once:true});</script>
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b1020; --surface:#0f162b; --card:#121a2f; --text:#e6edf6; --muted:#9aa6b2;
+      --line:rgba(255,255,255,.08); --shadow:0 8px 40px rgba(2,8,23,.35); --radius:18px;
+      --accent:#0ea5e9; --accent-rgb:14,165,233;
+    }
+    .theme-ocean{ --accent:#0ea5e9; --accent-rgb:14,165,233; }
+    .theme-emerald{ --accent:#22c55e; --accent-rgb:34,197,94; }
+    .theme-orchid{ --accent:#a855f7; --accent-rgb:168,85,247; }
+    .theme-citrus{ --accent:#f59e0b; --accent-rgb:245,158,11; }
+
+    *{box-sizing:border-box}
+    html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    a{color:#9ec1ff}
+    .app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:auto 1fr;min-height:100vh;grid-template-areas:"sidebar header" "sidebar main";}
+    .sidebar{grid-area:sidebar;background:linear-gradient(180deg,#0f1530,#0b1020);border-right:1px solid var(--line);padding:20px 14px;position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
+    .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#04b7ff);display:grid;place-items:center;color:#00131d;box-shadow:0 8px 20px rgba(2,8,23,.35)}
+    .side-nav{margin-top:18px}
+    .side-nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;color:var(--text);text-decoration:none;border:1px solid transparent;cursor:pointer;transition:.15s}
+    .side-nav a:hover{background:rgba(255,255,255,.05);border-color:var(--line)}
+    .side-nav a.active{background:rgba(var(--accent-rgb),.15);border-color:rgba(var(--accent-rgb),.35);color:var(--accent)}
+    .side-nav a.active i{color:var(--accent)}
+
+    /* Sidebar section label */
+    .side-section-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:14px 12px 6px;opacity:.7}
+
+    .header{grid-area:header;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+    .header .right{display:flex;align-items:center;gap:10px}
+    .chip{border:1px solid var(--line);padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.03)}
+    .btn-soft{border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--text);border-radius:12px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+    .btn-soft i{width:16px;height:16px}
+    .btn-soft:hover{background:rgba(255,255,255,.06)}
+    .theme-dot{width:14px;height:14px;border-radius:999px;display:inline-block;margin-right:6px}
+
+    .main{grid-area:main;padding:18px;}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+
+    /* Pages */
+    .page{display:none;}
+    .page.active{display:block;}
+
+    .canvas{position:relative;border:1px dashed var(--line);border-radius:16px;background:linear-gradient(180deg,#0c1226,#0a0f20);min-height:70vh;padding:14px;overflow:visible}
+    .grid-bg{position:absolute;inset:0;background-image:linear-gradient(transparent 31px,var(--line) 32px), linear-gradient(90deg, transparent 31px,var(--line) 32px);background-size:32px 32px;opacity:.35;pointer-events:none}
+
+    .panel{position:absolute;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:visible}
+    .panel .head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
+    .title{display:flex;align-items:center;gap:10px;font-weight:700}
+    .title .icon{width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.07);display:grid;place-items:center}
+    .panel .body{padding:12px;}
+    .divider{height:1px;background:var(--line);margin:10px 0}
+    .badge-main{border:1px solid rgba(255,255,255,.15);padding:2px 8px;border-radius:999px;font-size:12px;background:rgba(14,165,233,.15);color:#7dd3fc}
+    .toast-float{position:fixed;right:18px;bottom:18px;z-index:9999}
+    .handle{display:none;cursor:move}
+    .app.editing .handle{display:inline-grid}
+    .ghost{opacity:.65}
+    .kpi{font-size:32px;font-weight:800}
+    .delta.up{color:#22c55e}.delta.down{color:#ef4444}
+
+    .btn-accent{
+      border:1px solid rgba(var(--accent-rgb), .45) !important;
+      background:rgba(var(--accent-rgb), .16) !important;
+      color:var(--text) !important;
+      box-shadow:0 4px 18px rgba(var(--accent-rgb), .15) !important;
+      transition:.15s ease;
+      display:inline-flex; align-items:center; gap:8px; white-space:nowrap; overflow:hidden;
+    }
+    .btn-accent i{width:16px;height:16px}
+    .btn-accent:hover{ background:rgba(var(--accent-rgb), .24) !important; border-color:rgba(var(--accent-rgb), .7) !important; }
+    .btn-accent:disabled{ opacity:.75 }
+
+    .btn-icon{
+      width:32px; height:32px; padding:0; display:inline-grid; place-items:center;
+      border-radius:10px; border:1px solid var(--line); background:rgba(255,255,255,.03); color:var(--text);
+      position:relative; overflow:hidden;
+    }
+    .btn-icon.accent{ border-color:rgba(var(--accent-rgb), .45); }
+    .btn-icon:hover{ background:rgba(255,255,255,.06); }
+    .btn-icon i{ width:16px; height:16px; }
+
+    .btn-pill{ border-radius:999px; height:32px; padding:0 12px; font-size:13px; line-height:1; }
+    .btn-pill .spinner-border,
+    .btn-icon .spinner-border{ width:16px; height:16px; border-width:2px; }
+    .btn-icon .spinner-border{ position:relative; }
+
+    .nd-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow:auto}
+    .nd-sheet{width:min(1100px,96vw);background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+    .nd-sheet .nd-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
+    .nd-sheet .nd-body{padding:14px}
+    .cfg-help pre{white-space:pre-wrap;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:10px}
+
+    /* ===== POSTS PAGE ===== */
+    .posts-page{max-width:100%}
+    .posts-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+    .posts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+    .post-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;transition:.2s}
+    .post-card:hover{border-color:rgba(var(--accent-rgb),.35);box-shadow:0 8px 32px rgba(var(--accent-rgb),.1)}
+    .post-card-head{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+    .post-card-body{padding:16px}
+    .post-badge{font-size:11px;padding:3px 9px;border-radius:999px;font-weight:600;letter-spacing:.04em}
+    .post-badge.instagram{background:rgba(225,48,108,.18);color:#e1306c;border:1px solid rgba(225,48,108,.3)}
+    .post-badge.pending{background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)}
+    .post-badge.done{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)}
+    .post-badge.processing{background:rgba(14,165,233,.15);color:#38bdf8;border:1px solid rgba(14,165,233,.3)}
+
+    .post-form-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+    .post-form-card h6{font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+    .post-form-card h6 i{width:18px;height:18px;color:var(--accent)}
+    .post-result-area{background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:12px;padding:12px;min-height:80px;font-size:13px;white-space:pre-wrap;color:var(--text)}
+    .post-result-area.empty{color:var(--muted);font-style:italic}
+    .post-topics-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+    .topic-item{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;transition:.15s;cursor:pointer}
+    .topic-item:hover{border-color:rgba(var(--accent-rgb),.4);background:rgba(var(--accent-rgb),.06)}
+    .topic-item .topic-score{font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(var(--accent-rgb),.15);color:var(--accent);font-weight:600}
+    .wh-cfg-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+    .wh-cfg-row input{flex:1}
+    .section-divider{height:1px;background:var(--line);margin:20px 0}
+
+    /* ===== CADASTRO PAGE ===== */
+    .cadastro-page{max-width:900px}
+    .cadastro-standalone{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+    .cadastro-standalone .head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
+
+    @media (max-width:1080px){.app{grid-template-columns:80px 1fr}.brand .text{display:none}.side-nav a span{display:none}.side-section-label{display:none}}
+  </style>
+</head>
+<body class="theme-ocean">
+<div class="app" id="appRoot">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand mb-3">
+      <div class="logo">⚡</div><div class="text">n8nDash v2</div>
+    </div>
+
+    <div class="side-section-label">Principal</div>
+    <div class="side-nav vstack gap-1">
+      <a href="#" data-page="dashboard" class="active">
+        <i data-lucide="layout"></i> <span>Dashboards</span>
+      </a>
+      <a href="#" data-page="widgets">
+        <i data-lucide="blocks"></i> <span>Widget Library</span>
+      </a>
+    </div>
+
+    <div class="side-section-label">Automações</div>
+    <div class="side-nav vstack gap-1">
+      <a href="#" data-page="posts">
+        <i data-lucide="image"></i> <span>Posts Redes Sociais</span>
+      </a>
+      <a href="#" data-page="cadastro">
+        <i data-lucide="user-plus"></i> <span>Cadastro de Cliente</span>
+      </a>
+    </div>
+
+    <div class="side-section-label">Sistema</div>
+    <div class="side-nav vstack gap-1">
+      <a href="#" data-page="settings">
+        <i data-lucide="settings"></i> <span>Settings</span>
+      </a>
+    </div>
+
+    <div class="mt-auto pt-3 small text-secondary">Drag in <b>Edit Mode</b>. Layout & widget configs saved to localStorage.</div>
+  </aside>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="d-flex align-items-center gap-2">
+      <span class="chip">Demo — Frontend-only</span>
+      <span id="header-page-label" class="text-secondary small"></span>
+    </div>
+    <div class="right">
+      <div class="dropdown">
+        <button class="btn btn-soft dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+          <span class="theme-dot" style="background:var(--accent)"></span> Theme
+        </button>
+        <ul class="dropdown-menu dropdown-menu-dark">
+          <li><a class="dropdown-item" data-theme="ocean" href="#"><span class="theme-dot" style="background:#0ea5e9"></span> Ocean</a></li>
+          <li><a class="dropdown-item" data-theme="emerald" href="#"><span class="theme-dot" style="background:#22c55e"></span> Emerald</a></li>
+          <li><a class="dropdown-item" data-theme="orchid" href="#"><span class="theme-dot" style="background:#a855f7"></span> Orchid</a></li>
+          <li><a class="dropdown-item" data-theme="citrus" href="#"><span class="theme-dot" style="background:#f59e0b"></span> Citrus</a></li>
+        </ul>
+      </div>
+      <button id="btn-edit" class="btn btn-accent btn-pill" data-dashboard-only><i data-lucide="edit-3"></i> Edit Mode</button>
+      <button id="btn-main" class="btn btn-soft" data-dashboard-only><i data-lucide="refresh-ccw"></i> Run Selected</button>
+      <button id="btn-save" class="btn btn-soft" data-dashboard-only><i data-lucide="save"></i> Save Layout</button>
+      <button id="btn-reset" class="btn btn-soft" data-dashboard-only><i data-lucide="undo2"></i> Reset</button>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ===== PAGE: DASHBOARD ===== -->
+    <div class="page active" id="page-dashboard">
+      <div class="toolbar">
+        <div>
+          <h3 class="mb-0">Executive Metrics — Demo</h3>
+          <div class="text-secondary small">All widgets configurable • Fetch from n8n webhooks</div>
+        </div>
+        <div class="d-flex align-items-center gap-2"><span class="badge-main">Main refresh targets: Data & Charts</span></div>
+      </div>
+
+      <section class="canvas" id="canvas">
+        <div class="grid-bg"></div>
+        <section class="panel" data-id="kpi-revenue" data-kind="data" data-main="1" style="left:16px; top:16px; width:360px; height:180px;"></section>
+        <section class="panel" data-id="kpi-subs" data-kind="data" data-main="1" style="left:396px; top:16px; width:320px; height:180px;"></section>
+        <section class="panel" data-id="list-links" data-kind="data" data-main="1" style="left:736px; top:352px; width:560px; height:260px;"></section>
+        <section class="panel" data-id="chart-revenue" data-kind="chart" data-main="1" style="left:736px; top:16px; width:560px; height:320px;"></section>
+        <section class="panel" data-id="chart-traffic" data-kind="chart" data-main="1" style="left:16px; top:212px; width:700px; height:320px;"></section>
+        <section class="panel" data-id="chart-pie" data-kind="chart" data-main="0" style="left:16px; top:548px; width:360px; height:320px;"></section>
+        <section class="panel" data-id="app-blog" data-kind="custom" data-main="0" style="left:396px; top:548px; width:520px; height:300px;"></section>
+        <section class="panel" data-id="app-webhook" data-kind="custom" data-main="0" style="left:936px; top:548px; width:360px; height:420px;"></section>
+      </section>
+    </div>
+
+    <!-- ===== PAGE: POSTS REDES SOCIAIS ===== -->
+    <div class="page" id="page-posts">
+      <div class="toolbar">
+        <div>
+          <h3 class="mb-0">📱 Posts — Redes Sociais</h3>
+          <div class="text-secondary small">Geração automática de conteúdo via agentes n8n</div>
+        </div>
+      </div>
+
+      <div class="posts-page">
+
+        <!-- Webhook Config -->
+        <div class="post-form-card">
+          <h6><i data-lucide="link"></i> Configuração do Webhook n8n</h6>
+          <div class="row g-2">
+            <div class="col-md-8">
+              <label class="form-label small mb-1">URL do Webhook (Geração de Temas)</label>
+              <div class="wh-cfg-row">
+                <input id="posts-webhook-url" type="text" class="form-control form-control-sm" placeholder="https://seu-n8n.com/webhook/gerar-carrossel" />
+                <button class="btn btn-accent btn-pill" id="posts-save-url"><i data-lucide="save"></i> Salvar</button>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small mb-1">URL do Webhook (Publicar no Instagram)</label>
+              <div class="wh-cfg-row">
+                <input id="posts-publish-url" type="text" class="form-control form-control-sm" placeholder="https://seu-n8n.com/webhook/publicar" />
+                <button class="btn btn-soft btn-pill" id="posts-save-publish-url"><i data-lucide="save"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gerador de Temas -->
+        <div class="row g-3">
+          <div class="col-lg-5">
+            <div class="post-form-card" style="height:100%">
+              <h6><i data-lucide="search"></i> Gerar Temas para Carrosséis</h6>
+              <div class="row g-2">
+                <div class="col-12">
+                  <label class="form-label small mb-1">Cliente / ID</label>
+                  <input id="post-cliente" type="text" class="form-control form-control-sm" placeholder="Ex: Clínica Silva, cliente_123..." />
+                </div>
+                <div class="col-12">
+                  <label class="form-label small mb-1">Nicho</label>
+                  <input id="post-nicho" type="text" class="form-control form-control-sm" placeholder="Ex: nutrição esportiva, advocacia, clínica estética..." />
+                </div>
+                <div class="col-md-7">
+                  <label class="form-label small mb-1">Tom de Voz</label>
+                  <select id="post-tom" class="form-select form-select-sm">
+                    <option value="educativo e descontraído">Educativo e Descontraído</option>
+                    <option value="profissional e sério">Profissional e Sério</option>
+                    <option value="inspiracional">Inspiracional</option>
+                    <option value="divertido e informal">Divertido e Informal</option>
+                    <option value="técnico e informativo">Técnico e Informativo</option>
+                  </select>
+                </div>
+                <div class="col-md-5">
+                  <label class="form-label small mb-1">Qtd. de Temas</label>
+                  <select id="post-qtd" class="form-select form-select-sm">
+                    <option value="3">3 temas</option>
+                    <option value="5" selected>5 temas</option>
+                    <option value="7">7 temas</option>
+                    <option value="10">10 temas</option>
+                  </select>
+                </div>
+                <div class="col-12 mt-1">
+                  <button id="btn-gerar-temas" class="btn btn-accent w-100">
+                    <i data-lucide="sparkles"></i> <span>Gerar Temas com IA</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-7">
+            <div class="post-form-card" style="height:100%">
+              <h6><i data-lucide="list"></i> Temas Sugeridos pelos Agentes</h6>
+              <div id="topics-result-area">
+                <div class="post-result-area empty" id="topics-empty">
+                  Os temas gerados pelos agentes aparecerão aqui. Preencha os campos ao lado e clique em <b>Gerar Temas com IA</b>.
+                </div>
+                <div class="post-topics-list d-none" id="topics-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- ===== PIPELINE DE APROVAÇÃO ===== -->
+        <div id="pipeline-section">
+          <div class="post-form-card" id="pipeline-card">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h6 class="mb-0"><i data-lucide="git-branch"></i> <span id="pipeline-etapa-titulo">Pipeline</span></h6>
+              <div class="d-flex align-items-center gap-2">
+                <span id="pipeline-badge" class="post-badge processing">Aguardando...</span>
+                <button class="btn btn-soft btn-pill btn-sm" id="btn-pipeline-verificar">
+                  <i data-lucide="refresh-ccw"></i> Verificar
+                </button>
+              </div>
+            </div>
+
+            <!-- Indicador de etapas -->
+            <div class="d-flex align-items-center gap-2 mb-3" id="pipeline-steps">
+              <span class="pipeline-step active" data-step="1">1. Notícias</span>
+              <span style="color:var(--muted)">→</span>
+              <span class="pipeline-step" data-step="2">2. Ângulos</span>
+              <span style="color:var(--muted)">→</span>
+              <span class="pipeline-step" data-step="3">3. Carrossel</span>
+              <span style="color:var(--muted)">→</span>
+              <span class="pipeline-step" data-step="4">4. Publicar</span>
+            </div>
+
+            <!-- Área de conteúdo dinâmico -->
+            <div id="pipeline-conteudo">
+              <div class="post-result-area empty" id="pipeline-empty">
+                Aguardando resposta do agente... Clique em <b>Verificar</b> para checar.
+              </div>
+            </div>
+
+            <!-- Botões de ação (aparecem quando há dados) -->
+            <div id="pipeline-acoes" class="d-none mt-3 d-flex gap-2 flex-wrap">
+              <button class="btn btn-accent btn-pill" id="btn-pipeline-aprovar">
+                <i data-lucide="check"></i> <span id="btn-aprovar-label">Aprovar e Continuar</span>
+              </button>
+              <button class="btn btn-soft btn-pill" id="btn-pipeline-rejeitar">
+                <i data-lucide="x"></i> Cancelar Pipeline
+              </button>
+            </div>
+          </div>
+
+          <div class="section-divider"></div>
+        </div>
+
+        <style>
+          .pipeline-step {
+            font-size: 12px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            color: var(--muted);
+            background: rgba(255,255,255,.03);
+          }
+          .pipeline-step.active {
+            border-color: rgba(var(--accent-rgb),.45);
+            color: var(--accent);
+            background: rgba(var(--accent-rgb),.12);
+          }
+          .pipeline-step.done {
+            border-color: rgba(34,197,94,.35);
+            color: #22c55e;
+            background: rgba(34,197,94,.1);
+          }
+          .pipeline-item {
+            background: rgba(255,255,255,.03);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: .15s;
+          }
+          .pipeline-item:hover {
+            border-color: rgba(var(--accent-rgb),.4);
+            background: rgba(var(--accent-rgb),.06);
+          }
+          .pipeline-item.selected {
+            border-color: rgba(var(--accent-rgb),.7);
+            background: rgba(var(--accent-rgb),.12);
+          }
+          .pipeline-item .item-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+          .pipeline-item .item-meta { font-size: 11px; color: var(--muted); }
+        </style>
+
+        <!-- Criar Post Manual -->
+        <div class="post-form-card">
+          <h6><i data-lucide="edit-3"></i> Criar Post Manual para Instagram</h6>
+          <div class="row g-2">
+            <div class="col-md-5">
+              <label class="form-label small mb-1">URL da Imagem / Arte</label>
+              <input id="post-image-url" type="text" class="form-control form-control-sm" placeholder="https://... (Cloudflare R2, imgbb, etc)" />
+            </div>
+            <div class="col-md-5">
+              <label class="form-label small mb-1">Legenda</label>
+              <textarea id="post-caption" class="form-control form-control-sm" rows="2" placeholder="Legenda do post com emojis e hashtags..."></textarea>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+              <button id="btn-publicar" class="btn btn-accent w-100">
+                <i data-lucide="send"></i> <span>Publicar</span>
+              </button>
+            </div>
+            <div id="post-feedback" class="col-12 d-none"></div>
+          </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Histórico de Posts -->
+        <div class="d-flex align-items-center justify-content-between mb-12">
+          <h6 class="mb-0 fw-bold" style="display:flex;align-items:center;gap:8px">
+            <i data-lucide="clock" style="width:18px;height:18px;color:var(--accent)"></i> Histórico de Posts
+          </h6>
+          <button class="btn btn-soft btn-pill btn-sm" id="btn-clear-history"><i data-lucide="trash-2"></i> Limpar</button>
+        </div>
+        <div class="posts-grid" id="posts-history-grid">
+          <div class="text-secondary small" id="posts-history-empty">Nenhum post registrado ainda.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== PAGE: CADASTRO CLIENTE ===== -->
+    <div class="page" id="page-cadastro">
+      <div class="toolbar">
+        <div>
+          <h3 class="mb-0">👤 Cadastro de Cliente</h3>
+          <div class="text-secondary small">Cadastre clientes e gere cobranças automaticamente via n8n + Asaas</div>
+        </div>
+      </div>
+
+      <div class="cadastro-page">
+        <div class="cadastro-standalone">
+          <!-- cabeçalho e form injetados pelo JS -->
+          <div id="panel-cadastro-page"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PAGE: WIDGET LIBRARY (placeholder) ===== -->
+    <div class="page" id="page-widgets">
+      <div class="toolbar"><div><h3 class="mb-0">Widget Library</h3><div class="text-secondary small">Em breve</div></div></div>
+      <div class="text-secondary">Biblioteca de widgets disponível em breve.</div>
+    </div>
+
+    <!-- ===== PAGE: SETTINGS (placeholder) ===== -->
+    <div class="page" id="page-settings">
+      <div class="toolbar"><div><h3 class="mb-0">Settings</h3><div class="text-secondary small">Configurações gerais</div></div></div>
+      <div class="text-secondary">Configurações disponíveis em breve.</div>
+    </div>
+
+    <div class="toast-float" id="toasts"></div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ========== Utilities ========== */
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const toastBox = $('#toasts');
+function toast(msg, type='info'){ const el=document.createElement('div'); el.className=`alert alert-${type==='info'?'secondary':(type==='success'?'success':(type==='danger'?'danger':'warning'))} shadow-sm mt-2`; el.innerHTML=msg; toastBox.appendChild(el); setTimeout(()=>el.remove(),4000); }
+function getByPath(obj, path){ if(!path) return undefined; return path.split('.').reduce((a,k)=> (a && (k in a)) ? a[k] : undefined, obj); }
+function uid(){ return 'id'+Math.random().toString(36).slice(2,9); }
+
+/* ========== Theme ========== */
+lucide.createIcons();
+const rootBody = document.body;
+const savedTheme = localStorage.getItem('nd.theme');
+if(savedTheme){ rootBody.classList.remove('theme-ocean','theme-emerald','theme-orchid','theme-citrus'); rootBody.classList.add(`theme-${savedTheme}`); }
+$$('[data-theme]').forEach(a=> a.addEventListener('click',e=>{
+  e.preventDefault(); const t=a.getAttribute('data-theme');
+  rootBody.classList.remove('theme-ocean','theme-emerald','theme-orchid','theme-citrus');
+  rootBody.classList.add(`theme-${t}`); localStorage.setItem('nd.theme',t);
+  $('.theme-dot').style.background = getComputedStyle(document.body).getPropertyValue('--accent');
+}));
+
+/* ========== Page Navigation ========== */
+const pageLabels = {
+  dashboard: 'Executive Metrics',
+  posts: 'Posts — Redes Sociais',
+  cadastro: 'Cadastro de Cliente',
+  widgets: 'Widget Library',
+  settings: 'Settings'
+};
+const dashboardOnlyBtns = $$('[data-dashboard-only]');
+
+function navigateTo(pageId){
+  $$('.page').forEach(p=> p.classList.remove('active'));
+  $$('.side-nav a[data-page]').forEach(a=> a.classList.remove('active'));
+  const page = $(`#page-${pageId}`);
+  if(page) page.classList.add('active');
+  const link = $(`.side-nav a[data-page="${pageId}"]`);
+  if(link) link.classList.add('active');
+  const lbl = $('#header-page-label');
+  if(lbl) lbl.textContent = pageLabels[pageId] || '';
+  // show/hide dashboard-only header buttons
+  const isDash = pageId === 'dashboard';
+  dashboardOnlyBtns.forEach(b => b.style.display = isDash ? '' : 'none');
+  localStorage.setItem('nd.activePage', pageId);
+  lucide.createIcons();
+}
+
+$$('.side-nav a[data-page]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    navigateTo(a.getAttribute('data-page'));
+  });
+});
+
+// Restore last page
+const lastPage = localStorage.getItem('nd.activePage') || 'dashboard';
+navigateTo(lastPage);
+
+/* ========== Layout + Scrolling ========== */
+let EDIT=false;
+const appRoot = $('#appRoot');
+const canvas = $('#canvas');
+const panels = ()=> $$('.panel', canvas);
+function fitCanvasHeight(){
+  const bottoms = panels().map(p=> p.offsetTop + p.offsetHeight);
+  const maxBottom = bottoms.length ? Math.max(...bottoms) : 0;
+  const pad = 48, min = Math.max(window.innerHeight*0.6, 480);
+  canvas.style.height = Math.max(maxBottom+pad, min) + 'px';
+}
+const ro=new ResizeObserver(()=> fitCanvasHeight());
+function observe(){ panels().forEach(p=> ro.observe(p)); }
+(function loadLayout(){
+  const saved = JSON.parse(localStorage.getItem('nd.layout')||'null');
+  if(saved){ panels().forEach(p=>{ const s=saved[p.dataset.id]; if(s){ Object.assign(p.style,{left:s.left,top:s.top,width:s.width,height:s.height}); }}); }
+  fitCanvasHeight(); observe(); window.addEventListener('resize',fitCanvasHeight);
+})();
+$('#btn-save').addEventListener('click', ()=>{
+  const out={}; panels().forEach(p=> out[p.dataset.id]={left:p.style.left,top:p.style.top,width:p.style.width,height:p.style.height});
+  localStorage.setItem('nd.layout', JSON.stringify(out)); toast('Layout saved.','success');
+});
+$('#btn-reset').addEventListener('click', ()=>{ localStorage.removeItem('nd.layout'); localStorage.removeItem('nd.widgets.v3_1'); location.reload(); });
+$('#btn-edit').addEventListener('click', ()=>{
+  EDIT=!EDIT; $('#btn-edit').innerHTML = EDIT ? '<i data-lucide="check"></i> Done' : '<i data-lucide="edit-3"></i> Edit Mode';
+  appRoot.classList.toggle('editing', EDIT);
+  panels().forEach(p=> p.classList.toggle('ghost', EDIT));
+  lucide.createIcons();
+});
+interact('.panel').draggable({
+  allowFrom: '.handle',
+  listeners:{
+    start(e){ if(!EDIT) e.interaction.stop(); },
+    move(e){ const t=e.target; const x=(parseFloat(t.getAttribute('data-x'))||0)+e.dx; const y=(parseFloat(t.getAttribute('data-y'))||0)+e.dy; t.style.transform=`translate(${x}px,${y}px)`; t.dataset.x=x; t.dataset.y=y; },
+    end(e){ const t=e.target; const x=parseFloat(t.dataset.x)||0, y=parseFloat(t.dataset.y)||0;
+      const r=t.getBoundingClientRect(), pr=canvas.getBoundingClientRect();
+      const left=Math.max(8, r.left-pr.left), top=Math.max(8, r.top-pr.top);
+      t.style.left=Math.round(left/16)*16+'px'; t.style.top=Math.round(top/16)*16+'px';
+      t.style.transform=''; t.dataset.x=0; t.dataset.y=0; fitCanvasHeight();
+    }
+  }
+}).resizable({
+  edges:{left:false,right:true,bottom:true,top:false},
+  listeners:{ move(e){ if(!EDIT) return; e.target.style.width=Math.round(e.rect.width/16)*16+'px'; e.target.style.height=Math.round(e.rect.height/16)*16+'px'; fitCanvasHeight(); } }
+});
+
+/* ========== Store ========== */
+const LS_WIDGETS='nd.widgets.v3_1';
+const store = {
+  load(){ try{ return JSON.parse(localStorage.getItem(LS_WIDGETS)||'{}'); }catch{return {}} },
+  save(obj){ localStorage.setItem(LS_WIDGETS, JSON.stringify(obj)); },
+  get(id){ const all=this.load(); return all[id]||null; },
+  set(id,cfg){ const all=this.load(); all[id]=cfg; this.save(all); }
+};
+
+/* ========== Overlay ========== */
+let overlayEl=null;
+function openOverlay(title, innerHTML){
+  closeOverlay();
+  overlayEl=document.createElement('div');
+  overlayEl.className='nd-overlay';
+  overlayEl.innerHTML=`
+    <div class="nd-sheet">
+      <div class="nd-head">
+        <div class="d-flex align-items-center gap-2">
+          <i data-lucide="settings"></i>
+          <div class="fw-bold">${esc(title)}</div>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-soft btn-sm" data-ovl="close"><i data-lucide="x"></i> Close</button>
+        </div>
+      </div>
+      <div class="nd-body" id="nd-pane">${innerHTML}</div>
+    </div>`;
+  document.body.appendChild(overlayEl);
+  document.body.style.overflow='hidden';
+  lucide.createIcons();
+  overlayEl.addEventListener('click', (e)=>{ if(e.target===overlayEl) closeOverlay(); });
+  overlayEl.querySelector('[data-ovl="close"]').addEventListener('click', closeOverlay);
+}
+function closeOverlay(){ if(!overlayEl) return; overlayEl.remove(); overlayEl=null; document.body.style.overflow=''; }
+
+/* ========== Header + shells ========== */
+function headerTemplate(cfg){
+  const actionable = (cfg.kind==='data' || cfg.kind==='chart');
+  return `
+  <div class="head">
+    <div class="title">
+      <div class="icon"><i data-lucide="${esc(cfg.icon||'box')}"></i></div>
+      <span class="w-title">${esc(cfg.title||'Untitled')}</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge-main">${esc(cfg.typeLabel|| (cfg.kind==='custom'?'App':'Data'))}</span>
+      ${actionable ? `<button class="btn btn-icon btn-refresh accent" title="Refresh"><i data-lucide="refresh-ccw"></i></button>`:''}
+      <button class="btn btn-icon btn-config" title="Configure"><i data-lucide="settings"></i></button>
+      <span class="handle" title="Drag (Edit Mode)"><i data-lucide="move"></i></span>
+    </div>
+  </div>`;
+}
+function bodyShell(){
+  return `
+    <div class="body">
+      <div class="content"></div>
+      <div class="divider d-none"></div>
+      <div class="status small text-secondary d-none"></div>
+    </div>
+    <div class="resize-corner"></div>`;
+}
+function setStatus(panel, msg){
+  const div = panel.querySelector('.status');
+  const sep = panel.querySelector('.divider');
+  if(!msg){ div.classList.add('d-none'); div.textContent=''; sep.classList.add('d-none'); }
+  else{ div.classList.remove('d-none'); sep.classList.remove('d-none'); div.textContent=msg; }
+}
+
+function spinRefresh(btn, on){
+  if(on){
+    const icon = btn.querySelector('i');
+    if(icon) icon.style.display='none';
+    let sp = btn.querySelector('.spinner-border');
+    if(!sp){ sp = document.createElement('span'); sp.className='spinner-border'; btn.appendChild(sp); }
+  }else{
+    const icon = btn.querySelector('i');
+    if(icon) icon.style.display='';
+    const sp = btn.querySelector('.spinner-border');
+    if(sp) sp.remove();
+  }
+}
+
+async function fetchAndApply(panel, cfg, applyFn, formDataOverride){
+  const statusSetter = (txt)=> setStatus(panel, txt);
+  const btn = panel.querySelector('.btn-run') || panel.querySelector('.btn-refresh');
+  if(!btn){ toast('No action button found.','warning'); return; }
+  const isRefreshBtn = btn.classList.contains('btn-refresh');
+  btn.disabled=true;
+  let spinEl=null;
+  if(isRefreshBtn){ spinRefresh(btn, true); }
+  else{ spinEl=document.createElement('span'); spinEl.className='spinner-border spinner-border-sm'; btn.appendChild(spinEl); }
+  const {url,method,sendAsJson,headers} = cfg.n8n||{};
+  if(!url){ toast('Please configure webhook URL.','warning'); statusSetter('Missing URL'); btn.disabled=false; if(isRefreshBtn){ spinRefresh(btn,false); } else if(spinEl){ spinEl.remove(); } return; }
+  let fetchUrl=url, fetchOpts={ method:(method||'POST'), headers:{}, mode:'cors' };
+  (headers||[]).forEach(h=>{ if(h.key) fetchOpts.headers[h.key]=h.value||''; });
+  if((method||'POST')==='GET'){
+    if(formDataOverride){ const params = new URLSearchParams(); for(const [k,v] of formDataOverride.entries()){ if(v instanceof File) continue; params.append(k,String(v)); } fetchUrl += (fetchUrl.includes('?')?'&':'?') + params.toString(); }
+  }else{
+    if(formDataOverride){
+      const hasFile=[...formDataOverride.values()].some(v=> v instanceof File);
+      if(!sendAsJson || hasFile){ if(fetchOpts.headers['Content-Type']) delete fetchOpts.headers['Content-Type']; fetchOpts.body=formDataOverride; }
+      else{ fetchOpts.headers['Content-Type']='application/json'; const obj={}; for(const [k,v] of formDataOverride.entries()){ obj[k]=v; } fetchOpts.body=JSON.stringify(obj); }
+    }else{
+      if(sendAsJson){ fetchOpts.headers['Content-Type']='application/json'; fetchOpts.body='{}'; }
+    }
+  }
+  statusSetter('Sending…');
+  try{
+    const res = await fetch(fetchUrl, fetchOpts);
+    const ct=(res.headers.get('content-type')||'').toLowerCase();
+    let data=null, text=null, blob=null;
+    if(ct.includes('application/json')) data=await res.json(); else if(ct.startsWith('text/')) text=await res.text(); else blob=await res.blob();
+    if(!res.ok) toast(`Webhook returned ${res.status}`,'warning'); else toast('Webhook succeeded.','success');
+    applyFn(data,text,blob,ct);
+  }catch(err){
+    toast('Network/CORS error calling webhook.','danger');
+    statusSetter('Error (see console / CORS)'); console.error(err);
+  }finally{
+    btn.disabled=false;
+    if(isRefreshBtn){ spinRefresh(btn,false); } else if(spinEl){ spinEl.remove(); }
+    fitCanvasHeight();
+  }
+}
+
+/* ========== Data widgets ========== */
+function renderDataWidget(panel, cfg){
+  const content = panel.querySelector('.content');
+  const v = cfg.dataSpec||{};
+  content.innerHTML = `
+    <div class="row g-2 align-items-center">
+      <div class="col-12">
+        <div class="kpi">
+          <span class="main-val" id="v1-${cfg.id}">${esc(v.demoV1||'—')}</span>
+          <span class="delta ${((v.demoV2||'').toString().trim().startsWith('-'))?'down':'up'}" id="v2-${cfg.id}">${esc(v.demoV2||'')}</span>
+        </div>
+        <div class="small text-secondary">${esc(cfg.subtitle||'')}</div>
+      </div>
+      <div class="col-12" id="list-${cfg.id}"></div>
+    </div>
+  `;
+  lucide.createIcons();
+  if((cfg.dataSpec?.mode||'kpi')==='list'){
+    $(`#list-${cfg.id}`).innerHTML = `
+      <table class="table table-sm table-darkish align-middle mb-0"><tbody id="tbody-${cfg.id}">
+        ${(v.demoList||[]).map(item=>`<tr><td><a href="${esc(item.url||'#')}" target="_blank">${esc(item.text||'Item')}</a></td></tr>`).join('') || `<tr><td class="text-secondary small">No items yet.</td></tr>`}
+      </tbody></table>
+    `;
+  }
+  $('.btn-refresh', panel).addEventListener('click', async (e)=>{
+    e.preventDefault();
+    await fetchAndApply(panel, cfg, (data)=>{
+      if((cfg.dataSpec?.mode||'kpi')==='list'){
+        const listPath = cfg.dataSpec.listPath||'items';
+        const labelPath = cfg.dataSpec.itemLabelPath||'title';
+        const urlPath   = cfg.dataSpec.itemUrlPath||'url';
+        const arr = Array.isArray(getByPath(data, listPath)) ? getByPath(data,listPath) : [];
+        const rows = arr.map(it=>`<tr><td><a href="${esc(getByPath(it,urlPath)||'#')}" target="_blank">${esc(getByPath(it,labelPath)||'Item')}</a></td></tr>`).join('');
+        $(`#tbody-${cfg.id}`).innerHTML = rows || `<tr><td class="text-secondary small">No items returned.</td></tr>`;
+        setStatus(panel, `Loaded ${arr.length} items.`);
+      }else{
+        const v1 = getByPath(data, cfg.dataSpec.value1Path||'value1');
+        const v2 = getByPath(data, cfg.dataSpec.value2Path||'value2');
+        const v3 = getByPath(data, cfg.dataSpec.value3UrlPath||'value3Url');
+        const v1El = $(`#v1-${cfg.id}`), v2El = $(`#v2-${cfg.id}`);
+        v1El.textContent = (v1!=null) ? v1 : '—';
+        v2El.textContent = (v2!=null) ? v2 : '';
+        v2El.classList.toggle('down', (String(v2||'').trim().startsWith('-')));
+        if(v3){
+          if(!v1El.parentNode.querySelector('a.link-v1')){
+            const a=document.createElement('a'); a.className='link-v1'; a.style.textDecoration='none'; a.style.color='inherit'; v1El.replaceWith(a); a.appendChild(v1El);
+          }
+          v1El.parentNode.setAttribute('href', v3); v1El.parentNode.setAttribute('target','_blank');
+        }
+        setStatus(panel, 'OK');
+      }
+    });
+  });
+  attachConfig(panel, cfg, 'data');
+}
+
+/* ========== Chart widgets ========== */
+function renderChartWidget(panel, cfg){
+  const content = panel.querySelector('.content');
+  const canvasId = `c-${cfg.id}`;
+  content.innerHTML = `<div style="height:calc(100% - 0px); min-height:180px;"><canvas id="${canvasId}"></canvas></div>`;
+  lucide.createIcons();
+  let chart=null;
+  async function run(){
+    await fetchAndApply(panel, cfg, (data)=>{
+      if(!window.Chart) return;
+      const ctx = $(`#${canvasId}`).getContext('2d');
+      if(chart){ chart.destroy(); }
+      const style = (cfg.chartSpec?.style||'line');
+      if(style==='line'){
+        const labels = getByPath(data, cfg.chartSpec.labelsPath||'xLabels') || Array.from({length:30},(_,i)=>i+1);
+        const dsData = getByPath(data, cfg.chartSpec.dataPath||'series[0].data') || Array.from({length:30},()=>Math.round(7000+Math.random()*2000));
+        const labelName = cfg.chartSpec.datasetLabel || (getByPath(data,'series[0].label')||'Series');
+        chart = new Chart(ctx,{type:'line',data:{labels,datasets:[{label:labelName,data:dsData,tension:.35,fill:false,borderWidth:2}]},
+          options:{responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#e6edf6'},grid:{color:'rgba(255,255,255,.08)'}},y:{ticks:{color:'#e6edf6'},grid:{color:'rgba(255,255,255,.08)'},suggestedMax: getByPath(data, cfg.chartSpec.yMaxPath||'yMax')||undefined}}}});
+        setStatus(panel, `Line: ${labels.length} points`);
+      }else if(style==='bar'){
+        const labels = getByPath(data, cfg.chartSpec.labelsPath||'labels') || ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        const dsData = getByPath(data, cfg.chartSpec.dataPath||'data') || [530,610,580,740,890,660,720];
+        const labelName = cfg.chartSpec.datasetLabel || (getByPath(data,'series[0].label')||'Visits');
+        chart = new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:labelName,data:dsData}]},
+          options:{responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#e6edf6'},grid:{color:'rgba(255,255,255,.08)'}},y:{ticks:{color:'#e6edf6'},grid:{color:'rgba(255,255,255,.08)'},suggestedMax: getByPath(data, cfg.chartSpec.yMaxPath||'yMax')||undefined}}}});
+        setStatus(panel, `Bar: ${labels.length} bars`);
+      }else{
+        const labels = getByPath(data, cfg.chartSpec.labelsPath||'labels') || ['A','B','C'];
+        const values = getByPath(data, cfg.chartSpec.dataPath||'values') || [30,40,30];
+        chart = new Chart(ctx,{type:'pie',data:{labels,datasets:[{data:values}]},options:{responsive:true,maintainAspectRatio:false}});
+        setStatus(panel, `Pie: ${labels.length} slices`);
+      }
+    });
+  }
+  $('.btn-refresh', panel).addEventListener('click', (e)=>{ e.preventDefault(); run(); });
+  attachConfig(panel, cfg, 'chart');
+}
+
+/* ========== Custom (App) widgets ========== */
+function renderCustomWidget(panel, cfg){
+  const content = panel.querySelector('.content');
+  content.innerHTML = `
+    <form class="row g-2" id="frm-${cfg.id}">
+      ${(cfg.customSpec?.responseOnly)?'': (cfg.customSpec?.fields||[
+        {id:uid(),type:'text',name:'topic',placeholder:'Topic (e.g., AI for SMBs)'},
+        {id:uid(),type:'select',name:'tone',options:['Professional','Friendly','Playful']}
+      ]).map(f=>inputHtml(f)).join('')}
+      <div class="${(cfg.customSpec?.responseOnly)?'col-12 d-grid':'col-md-2 d-grid'}">
+        <button class="btn btn-accent btn-pill btn-run" type="submit"><i data-lucide="play"></i> <span>${esc(cfg.runLabel||'Run')}</span></button>
+      </div>
+    </form>
+    <div class="divider d-none"></div>
+    <div class="small status d-none" id="resp-${cfg.id}"></div>
+  `;
+  lucide.createIcons();
+  $(`#frm-${cfg.id}`, panel).addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const respEl = $(`#resp-${cfg.id}`, panel);
+    setStatus(panel, 'Sending…');
+    await fetchAndApply(panel, cfg, (data,text,blob,ct)=>{
+      const msgEl = respEl;
+      if(ct.includes('application/json')) msgEl.innerHTML = `<pre class="small mb-0">${esc(JSON.stringify(data,null,2))}</pre>`;
+      else if(ct.startsWith('text/')) msgEl.innerHTML = `<pre class="small mb-0">${esc(text)}</pre>`;
+      else { const url = URL.createObjectURL(blob); msgEl.innerHTML = `Received <b>${esc(ct||'binary')}</b> (${blob.size.toLocaleString()} bytes). <a href="${url}" download="response">Download</a>`; }
+      msgEl.classList.remove('d-none'); panel.querySelector('.divider').classList.remove('d-none');
+      setStatus(panel, 'OK');
+    }, new FormData(e.target));
+  });
+  attachConfig(panel, cfg, 'custom');
+}
+function inputHtml(f){
+  const id=esc(f.id||uid()), nm=esc(f.name||'field'), ph=f.placeholder?`placeholder="${esc(f.placeholder)}"`:'';
+  if(f.type==='select') return `<div class="col-md-4"><select id="${id}" name="${nm}" class="form-select">${(f.options||[]).map(o=>`<option>${esc(o)}</option>`).join('')}</select></div>`;
+  if(f.type==='textarea') return `<div class="col-12"><textarea id="${id}" name="${nm}" rows="4" class="form-control" ${ph}></textarea></div>`;
+  if(f.type==='file') return `<div class="col-12"><input id="${id}" name="${nm}" type="file" class="form-control" /></div>`;
+  if(f.type==='checkbox') return `<div class="col-12 form-check ms-2"><input id="${id}" name="${nm}" class="form-check-input" type="checkbox"> <label class="form-check-label" for="${id}">${esc(f.label||nm)}</label></div>`;
+  if(f.type==='number') return `<div class="col-md-4"><input id="${id}" name="${nm}" type="number" class="form-control" ${ph}/></div>`;
+  return `<div class="col-md-6"><input id="${id}" name="${nm}" class="form-control" ${ph}/></div>`;
+}
+
+/* ========== Config forms ========== */
+function identityFields(cfg){
+  return `
+    <div class="row g-2">
+      <div class="col-md-4"><label class="form-label small">Icon (lucide)</label><input class="form-control form-control-sm" data-cfg="icon" value="${esc(cfg.icon)}" placeholder="e.g. dollar-sign"/></div>
+      <div class="col-md-6"><label class="form-label small">Title</label><input class="form-control form-control-sm" data-cfg="title" value="${esc(cfg.title)}"/></div>
+      <div class="col-md-2"><label class="form-label small">Badge</label><select class="form-select form-select-sm" data-cfg="typeLabel"><option ${cfg.typeLabel==='Data'?'selected':''}>Data</option><option ${cfg.typeLabel==='App'?'selected':''}>App</option></select></div>
+    </div>`;
+}
+function n8nFields(cfg){
+  const n=cfg.n8n;
+  return `
+    <div class="row g-2 mt-2">
+      <div class="col-md-8"><label class="form-label small">Webhook URL</label><input class="form-control form-control-sm" data-cfg="url" value="${esc(n.url||'')}" placeholder="https://your-n8n/webhook/..."/></div>
+      <div class="col-md-2"><label class="form-label small">Method</label><select class="form-select form-select-sm" data-cfg="method"><option ${n.method==='POST'?'selected':''}>POST</option><option ${n.method==='GET'?'selected':''}>GET</option></select></div>
+      <div class="col-md-2"><label class="form-label small">POST Body</label><select class="form-select form-select-sm" data-cfg="sendAsJson"><option value="auto" ${!n.sendAsJson?'selected':''}>Auto</option><option value="json" ${n.sendAsJson?'selected':''}>JSON</option></select></div>
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <div class="small text-secondary">Headers</div>
+          <button type="button" class="btn btn-soft btn-sm" data-act="add-header"><i data-lucide="plus"></i> Add Header</button>
+        </div>
+        <div id="hdrList">${(n.headers||[]).map(h=>`
+          <div class="row g-2 align-items-end mb-1" data-hrow="${esc(h.id)}">
+            <div class="col-md-5"><input class="form-control form-control-sm" data-h="key" placeholder="Header name" value="${esc(h.key||'')}" /></div>
+            <div class="col-md-5"><input class="form-control form-control-sm" data-h="val" placeholder="Header value" value="${esc(h.value||'')}" /></div>
+            <div class="col-md-2 d-flex justify-content-end"><button type="button" class="btn btn-soft btn-sm" data-act="del-header"><i data-lucide="trash"></i></button></div>
+          </div>`).join('') || `<div class="text-secondary small">No headers set.</div>`}
+        </div>
+      </div>
+    </div>
+    <div class="cfg-help mt-2">
+      <details>
+        <summary class="text-secondary">n8n — HTTP Response setup (click)</summary>
+        <pre>
+Use an <b>HTTP Response</b> node as the last step:
+- Status: 200
+- Headers:
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Headers: *
+  Access-Control-Allow-Methods: GET,POST,OPTIONS
+        </pre>
+      </details>
+    </div>`;
+}
+function dataConfigForm(cfg){
+  const ds=cfg.dataSpec;
+  return `
+    <form class="wcfg" autocomplete="off">
+      ${identityFields(cfg)}
+      ${n8nFields(cfg)}
+      <div class="divider"></div>
+      <div class="row g-2">
+        <div class="col-md-3"><label class="form-label small">Data Mode</label><select class="form-select form-select-sm" data-cfg="dataMode"><option value="kpi" ${ds.mode!=='list'?'selected':''}>KPI</option><option value="list" ${ds.mode==='list'?'selected':''}>Link List</option></select></div>
+        <div class="col-md-3"><label class="form-label small">Run Label</label><input class="form-control form-control-sm" data-cfg="runLabel" value="${esc(cfg.runLabel||'Refresh')}"/></div>
+        <div class="col-md-6"><label class="form-label small">Subtitle</label><input class="form-control form-control-sm" data-cfg="subtitle" value="${esc(cfg.subtitle||'')}"/></div>
+      </div>
+      <div class="row g-2 mt-1 ${ds.mode==='list'?'d-none':''}" data-map="kpi">
+        <div class="col-md-4"><label class="form-label small">value1 path</label><input class="form-control form-control-sm" data-cfg="value1Path" value="${esc(ds.value1Path||'value1')}" /></div>
+        <div class="col-md-4"><label class="form-label small">value2 path</label><input class="form-control form-control-sm" data-cfg="value2Path" value="${esc(ds.value2Path||'value2')}" /></div>
+        <div class="col-md-4"><label class="form-label small">value3Url path</label><input class="form-control form-control-sm" data-cfg="value3UrlPath" value="${esc(ds.value3UrlPath||'value3Url')}" /></div>
+      </div>
+      <div class="row g-2 mt-1 ${ds.mode==='list'?'':'d-none'}" data-map="list">
+        <div class="col-md-4"><label class="form-label small">list path</label><input class="form-control form-control-sm" data-cfg="listPath" value="${esc(ds.listPath||'items')}" /></div>
+        <div class="col-md-4"><label class="form-label small">item label path</label><input class="form-control form-control-sm" data-cfg="itemLabelPath" value="${esc(ds.itemLabelPath||'title')}" /></div>
+        <div class="col-md-4"><label class="form-label small">item url path</label><input class="form-control form-control-sm" data-cfg="itemUrlPath" value="${esc(ds.itemUrlPath||'url')}" /></div>
+      </div>
+      <div class="d-flex justify-content-end gap-2 mt-2">
+        <button type="button" class="btn btn-soft btn-sm" data-act="close"><i data-lucide="x"></i> Close</button>
+        <button type="submit" class="btn btn-accent btn-sm"><i data-lucide="save"></i> Save</button>
+      </div>
+    </form>`;
+}
+function chartConfigForm(cfg){
+  const cs=cfg.chartSpec;
+  return `
+    <form class="wcfg" autocomplete="off">
+      ${identityFields(cfg)}
+      ${n8nFields(cfg)}
+      <div class="divider"></div>
+      <div class="row g-2">
+        <div class="col-md-3"><label class="form-label small">Chart Style</label><select class="form-select form-select-sm" data-cfg="chartStyle"><option value="line" ${cs.style==='line'?'selected':''}>Line</option><option value="bar" ${cs.style==='bar'?'selected':''}>Bar</option><option value="pie" ${cs.style==='pie'?'selected':''}>Pie</option></select></div>
+        <div class="col-md-3"><label class="form-label small">Run Label</label><input class="form-control form-control-sm" data-cfg="runLabel" value="${esc(cfg.runLabel||'Refresh')}"/></div>
+      </div>
+      <div class="row g-2 mt-1">
+        <div class="col-md-4"><label class="form-label small">labels path</label><input class="form-control form-control-sm" data-cfg="labelsPath" value="${esc(cs.labelsPath||(cs.style==='bar'?'labels':'xLabels'))}" /></div>
+        <div class="col-md-4"><label class="form-label small">data path</label><input class="form-control form-control-sm" data-cfg="dataPath" value="${esc(cs.dataPath||(cs.style==='pie'?'values':'series[0].data'))}" /></div>
+        <div class="col-md-4"><label class="form-label small">dataset label</label><input class="form-control form-control-sm" data-cfg="datasetLabel" value="${esc(cs.datasetLabel||'Series')}" /></div>
+        <div class="col-md-4"><label class="form-label small">yMax path</label><input class="form-control form-control-sm" data-cfg="yMaxPath" value="${esc(cs.yMaxPath||'yMax')}" /></div>
+      </div>
+      <div class="d-flex justify-content-end gap-2 mt-2">
+        <button type="button" class="btn btn-soft btn-sm" data-act="close"><i data-lucide="x"></i> Close</button>
+        <button type="submit" class="btn btn-accent btn-sm"><i data-lucide="save"></i> Save</button>
+      </div>
+    </form>`;
+}
+function customConfigForm(cfg){
+  const cs=cfg.customSpec;
+  return `
+    <form class="wcfg" autocomplete="off">
+      ${identityFields(cfg)}
+      ${n8nFields(cfg)}
+      <div class="divider"></div>
+      <div class="row g-2">
+        <div class="col-md-3"><label class="form-label small">Run Label</label><input class="form-control form-control-sm" data-cfg="runLabel" value="${esc(cfg.runLabel||'Run')}"/></div>
+        <div class="col-md-3"><label class="form-label small">Response only</label><br><input type="checkbox" class="form-check-input mt-2" data-cfg="responseOnly" ${cs.responseOnly?'checked':''}/></div>
+      </div>
+      <div class="divider"></div>
+      <div class="small text-secondary mb-1">Fields</div>
+      <div id="fieldList">
+        ${(cs.fields||[]).map(f=> `
+        <div class="row g-2 align-items-end mb-2" data-row="${esc(f.id)}" style="border:1px dashed var(--line);border-radius:12px;padding:8px;">
+          <div class="col-md-3"><select class="form-select form-select-sm" data-edit="type">${['text','number','textarea','checkbox','select','file'].map(t=>`<option value="${t}" ${f.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+          <div class="col-md-3"><input class="form-control form-control-sm" data-edit="name" placeholder="name" value="${esc(f.name||'field')}"/></div>
+          <div class="col-md-4 ${f.type==='select'?'':'d-none'}"><input class="form-control form-control-sm" data-edit="options" placeholder="opt1, opt2" value="${esc((f.options||[]).join(', '))}"/></div>
+          <div class="col-md-2 d-flex justify-content-end"><button type="button" class="btn btn-soft btn-sm" data-act="del-field"><i data-lucide="trash"></i></button></div>
+        </div>`).join('')}
+      </div>
+      <div class="d-flex gap-2">
+        <select id="addType" class="form-select form-select-sm" style="width:auto"><option value="text">text</option><option value="number">number</option><option value="textarea">textarea</option><option value="checkbox">checkbox</option><option value="select">select</option><option value="file">file</option></select>
+        <button type="button" class="btn btn-accent btn-sm" data-act="add-field"><i data-lucide="plus"></i> Add Field</button>
+      </div>
+      <div class="d-flex justify-content-end gap-2 mt-2">
+        <button type="button" class="btn btn-soft btn-sm" data-act="close"><i data-lucide="x"></i> Close</button>
+        <button type="submit" class="btn btn-accent btn-sm"><i data-lucide="save"></i> Save</button>
+      </div>
+    </form>`;
+}
+
+function attachConfig(panel, cfg, kind){
+  const header = panel.querySelector('.head');
+  function rerenderHeader(){
+    header.querySelector('.title .icon').innerHTML = `<i data-lucide="${esc(cfg.icon)}"></i>`;
+    header.querySelector('.w-title').textContent = cfg.title;
+    header.querySelector('.badge-main').textContent = cfg.typeLabel;
+    lucide.createIcons();
+  }
+  header.querySelector('.btn-config').onclick = ()=>{
+    const formHtml = kind==='data'? dataConfigForm(cfg) : kind==='chart'? chartConfigForm(cfg) : customConfigForm(cfg);
+    openOverlay(`Configure: ${cfg.title}`, formHtml);
+    bindOverlayEvents();
+  };
+  function bindOverlayEvents(){
+    const pane = $('#nd-pane');
+    pane.addEventListener('input', (e)=>{
+      const t=e.target;
+      if(t.matches('[data-cfg="icon"]')){ cfg.icon=t.value.trim()||'box'; rerenderHeader(); }
+      if(t.matches('[data-cfg="title"]')){ cfg.title=t.value; rerenderHeader(); }
+      if(t.matches('[data-cfg="typeLabel"]')){ cfg.typeLabel=t.value; rerenderHeader(); }
+      if(t.matches('[data-cfg="url"]')) cfg.n8n.url=t.value.trim();
+      if(t.matches('[data-cfg="method"]')) cfg.n8n.method=t.value;
+      if(t.matches('[data-cfg="sendAsJson"]')) cfg.n8n.sendAsJson=(t.value==='json');
+      if(kind==='data'){
+        if(t.matches('[data-cfg="dataMode"]')){ cfg.dataSpec.mode=t.value; openOverlay(`Configure: ${cfg.title}`, dataConfigForm(cfg)); bindOverlayEvents(); return; }
+        if(t.matches('[data-cfg="runLabel"]')) cfg.runLabel=t.value;
+        if(t.matches('[data-cfg="subtitle"]')) cfg.subtitle=t.value;
+        if(t.matches('[data-cfg="value1Path"]')) cfg.dataSpec.value1Path=t.value;
+        if(t.matches('[data-cfg="value2Path"]')) cfg.dataSpec.value2Path=t.value;
+        if(t.matches('[data-cfg="value3UrlPath"]')) cfg.dataSpec.value3UrlPath=t.value;
+        if(t.matches('[data-cfg="listPath"]')) cfg.dataSpec.listPath=t.value;
+        if(t.matches('[data-cfg="itemLabelPath"]')) cfg.dataSpec.itemLabelPath=t.value;
+        if(t.matches('[data-cfg="itemUrlPath"]')) cfg.dataSpec.itemUrlPath=t.value;
+      }
+      if(kind==='chart'){
+        if(t.matches('[data-cfg="chartStyle"]')){ cfg.chartSpec.style=t.value; openOverlay(`Configure: ${cfg.title}`, chartConfigForm(cfg)); bindOverlayEvents(); return; }
+        if(t.matches('[data-cfg="runLabel"]')) cfg.runLabel=t.value;
+        if(t.matches('[data-cfg="labelsPath"]')) cfg.chartSpec.labelsPath=t.value;
+        if(t.matches('[data-cfg="dataPath"]')) cfg.chartSpec.dataPath=t.value;
+        if(t.matches('[data-cfg="datasetLabel"]')) cfg.chartSpec.datasetLabel=t.value;
+        if(t.matches('[data-cfg="yMaxPath"]')) cfg.chartSpec.yMaxPath=t.value;
+      }
+      if(kind==='custom'){
+        if(t.matches('[data-cfg="runLabel"]')) cfg.runLabel=t.value;
+        if(t.matches('[data-cfg="responseOnly"]')) cfg.customSpec.responseOnly = t.checked;
+        if(t.closest('[data-row]')){
+          const row=t.closest('[data-row]'); const id=row.getAttribute('data-row');
+          const f = cfg.customSpec.fields.find(x=>x.id===id); if(!f) return;
+          if(t.matches('[data-edit="type"]')){ f.type=t.value; openOverlay(`Configure: ${cfg.title}`, customConfigForm(cfg)); bindOverlayEvents(); return; }
+          if(t.matches('[data-edit="name"]')) f.name=t.value;
+          if(t.matches('[data-edit="options"]')) f.options=t.value.split(',').map(x=>x.trim()).filter(Boolean);
+        }
+      }
+      if(t.closest('[data-hrow]')){
+        const row=t.closest('[data-hrow]'); const id=row.getAttribute('data-hrow');
+        const h=(cfg.n8n.headers||[]).find(x=>x.id===id);
+        if(h){ if(t.matches('[data-h="key"]')) h.key=t.value; if(t.matches('[data-h="val"]')) h.value=t.value; }
+      }
+      const all=store.load(); all[cfg.id]=cfg; store.save(all);
+    });
+    pane.addEventListener('click', (e)=>{
+      const b=e.target.closest('[data-act]'); if(!b) return; const act=b.getAttribute('data-act');
+      if(act==='close'){ closeOverlay(); }
+      if(act==='add-header'){ cfg.n8n.headers=cfg.n8n.headers||[]; cfg.n8n.headers.push({id:uid(),key:'',value:''}); openOverlay(`Configure: ${cfg.title}`, (kind==='data'?dataConfigForm:kind==='chart'?chartConfigForm:customConfigForm)(cfg)); bindOverlayEvents(); }
+      if(act==='del-header'){ const row=b.closest('[data-hrow]'); const id=row.getAttribute('data-hrow'); cfg.n8n.headers=(cfg.n8n.headers||[]).filter(h=>h.id!==id); openOverlay(`Configure: ${cfg.title}`, (kind==='data'?dataConfigForm:kind==='chart'?chartConfigForm:customConfigForm)(cfg)); bindOverlayEvents(); }
+      if(act==='add-field'){ const type=$('#addType',pane).value; cfg.customSpec.fields=cfg.customSpec.fields||[]; cfg.customSpec.fields.push({id:uid(),type,name:`${type}_${cfg.customSpec.fields.length+1}`}); openOverlay(`Configure: ${cfg.title}`, customConfigForm(cfg)); bindOverlayEvents(); }
+      if(act==='del-field'){ const row=b.closest('[data-row]'); const id=row.getAttribute('data-row'); cfg.customSpec.fields=cfg.customSpec.fields.filter(f=>f.id!==id); openOverlay(`Configure: ${cfg.title}`, customConfigForm(cfg)); bindOverlayEvents(); }
+    });
+    pane.addEventListener('submit', (e)=>{
+      if(e.target.matches('.wcfg')){ e.preventDefault(); store.set(cfg.id,cfg); toast('Saved.','success'); closeOverlay(); rerenderPanel(panel, cfg); }
+    });
+  }
+}
+
+function rerenderPanel(panel, cfg){
+  panel.innerHTML = headerTemplate(cfg) + bodyShell();
+  lucide.createIcons();
+  if(cfg.kind==='data') renderDataWidget(panel,cfg);
+  if(cfg.kind==='chart') renderChartWidget(panel,cfg);
+  if(cfg.kind==='custom') renderCustomWidget(panel,cfg);
+  fitCanvasHeight();
+}
+
+function initPanel(panel){
+  const id = panel.dataset.id;
+  const kind = panel.dataset.kind;
+  const saved = store.get(id);
+  const defaults = {
+    id, kind, icon: 'box',
+    title: (()=>{
+      if(id==='kpi-revenue') return 'Revenue (MRR)'; if(id==='kpi-subs') return 'YouTube Subscribers';
+      if(id==='list-links') return 'Latest Headlines'; if(id==='chart-revenue') return 'Revenue (30 days)';
+      if(id==='chart-traffic') return 'Traffic (7 days)'; if(id==='chart-pie') return 'Market Share';
+      if(id==='app-blog') return 'Blog Generator'; if(id==='app-webhook') return 'Webhook App'; return 'Widget';
+    })(),
+    typeLabel: (kind==='custom')?'App':'Data',
+    runLabel: (kind==='custom')?'Run':'Refresh',
+    n8n: { url:'', method:'POST', sendAsJson:false, headers:[] },
+    dataSpec: kind==='data'? {
+      mode: (id==='list-links')?'list':'kpi',
+      value1Path:'value1', value2Path:'value2', value3UrlPath:'value3Url',
+      listPath:'items', itemLabelPath:'title', itemUrlPath:'url',
+      demoV1: (id==='kpi-revenue')?'$82,440':(id==='kpi-subs')?'12,873':'—',
+      demoV2:(id==='kpi-revenue')?'+4.3%':(id==='kpi-subs')?'+142':''
+    } : undefined,
+    chartSpec: kind==='chart'? {
+      style: (id==='chart-revenue')?'line':(id==='chart-traffic')?'bar':'pie',
+      labelsPath: (id==='chart-revenue')?'xLabels':'labels',
+      dataPath: (id==='chart-revenue')?'series[0].data':(id==='chart-traffic')?'data':'values',
+      datasetLabel: (id==='chart-revenue')?'Revenue':(id==='chart-traffic')?'Visits':'',
+      yMaxPath:'yMax'
+    } : undefined,
+    customSpec: kind==='custom'? {
+      responseOnly: false,
+      fields: (id==='app-blog')?[
+        {id:uid(),type:'text',name:'topic',placeholder:'Topic (e.g., AI for SMBs)'},
+        {id:uid(),type:'select',name:'tone',options:['Professional','Friendly','Playful']}
+      ]:[{id:uid(),type:'text',name:'prompt',placeholder:'Enter prompt'},{id:uid(),type:'file',name:'file'}]
+    }: undefined,
+    subtitle: ''
+  };
+  const cfg = saved ? Object.assign(defaults, saved) : defaults;
+  store.set(id, cfg);
+  panel.innerHTML = headerTemplate(cfg) + bodyShell();
+  lucide.createIcons();
+  if(kind==='data') renderDataWidget(panel, cfg);
+  if(kind==='chart') renderChartWidget(panel, cfg);
+  if(kind==='custom') renderCustomWidget(panel, cfg);
+}
+panels().forEach(initPanel);
+
+$('#btn-main').addEventListener('click', ()=>{
+  toast('Refreshing selected widgets…');
+  panels().filter(p=> p.dataset.main==='1').forEach(p=>{
+    const btn = p.querySelector('.btn-refresh') || p.querySelector('.btn-run');
+    if(btn){ btn.click(); }
+  });
+});
+
+/* ========== POSTS PAGE ========== */
+(function initPosts(){
+  const LS_WH   = 'nd.posts.webhook';
+  const LS_PUB  = 'nd.posts.publish';
+  const LS_HIST = 'nd.posts.history';
+
+  function getWh()   { return localStorage.getItem(LS_WH)||''; }
+  function getPub()  { return localStorage.getItem(LS_PUB)||''; }
+  function getHist() { try{ return JSON.parse(localStorage.getItem(LS_HIST)||'[]'); }catch{ return []; } }
+  function saveHist(arr){ localStorage.setItem(LS_HIST, JSON.stringify(arr)); }
+
+  // Restore saved URLs
+  document.getElementById('posts-webhook-url').value = getWh();
+  document.getElementById('posts-publish-url').value = getPub();
+
+  document.getElementById('posts-save-url').addEventListener('click', ()=>{
+    localStorage.setItem(LS_WH, document.getElementById('posts-webhook-url').value.trim());
+    toast('URL de geração salva!','success');
+  });
+  document.getElementById('posts-save-publish-url').addEventListener('click', ()=>{
+    localStorage.setItem(LS_PUB, document.getElementById('posts-publish-url').value.trim());
+    toast('URL de publicação salva!','success');
+  });
+
+  // Gerar Temas
+  document.getElementById('btn-gerar-temas').addEventListener('click', async ()=>{
+    const url   = getWh();
+    const nicho = document.getElementById('post-nicho').value.trim();
+    const cliente = document.getElementById('post-cliente').value.trim();
+    const tom   = document.getElementById('post-tom').value;
+    const qtd   = document.getElementById('post-qtd').value;
+    const btn   = document.getElementById('btn-gerar-temas');
+    const emptyEl = document.getElementById('topics-empty');
+    const listEl  = document.getElementById('topics-list');
+
+    if(!nicho){ toast('Preencha o nicho!','warning'); return; }
+    if(!url){ toast('Configure a URL do webhook de geração!','warning'); return; }
+
+    btn.disabled = true;
+    const icon = btn.querySelector('i'); if(icon) icon.style.display='none';
+    const sp = document.createElement('span'); sp.className='spinner-border spinner-border-sm'; btn.appendChild(sp);
+    emptyEl.classList.remove('d-none'); emptyEl.textContent = '⏳ Agentes pesquisando temas...';
+    listEl.classList.add('d-none');
+
+    try{
+      const res = await fetch(url, {
+        method:'POST', mode:'cors',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ cliente_id: cliente||'dashboard', nicho, tom_de_voz: tom, quantidade_temas: parseInt(qtd) })
+      });
+      const data = await res.json();
+      // Try to parse temas from response
+      const temas = data.temas || data.topics || (Array.isArray(data) ? data : null);
+      if(temas && Array.isArray(temas) && temas.length){
+        listEl.innerHTML = temas.map((t,i)=>`
+          <div class="topic-item" data-tema='${JSON.stringify(t).replace(/'/g,"&#39;")}'>
+            <div>
+              <div class="fw-600 small">${esc(t.titulo || t.title || t.tema || `Tema ${i+1}`)}</div>
+              <div class="text-secondary" style="font-size:11px">${esc(t.formato || t.format || '')}</div>
+            </div>
+            <span class="topic-score">${t.score_engajamento || t.score || '—'}</span>
+          </div>`).join('');
+        emptyEl.classList.add('d-none');
+        listEl.classList.remove('d-none');
+        toast(`${temas.length} temas gerados!`,'success');
+      } else {
+        // Show raw response
+        emptyEl.classList.remove('d-none');
+        emptyEl.innerHTML = `<pre class="small mb-0" style="color:var(--text)">${esc(JSON.stringify(data,null,2))}</pre>`;
+      }
+    }catch(err){
+      emptyEl.textContent = 'Erro ao conectar ao webhook. Verifique a URL e CORS.';
+      toast('Erro de rede/CORS','danger');
+      console.error(err);
+    }finally{
+      btn.disabled=false; if(icon) icon.style.display=''; sp.remove();
+    }
+  });
+
+  // Click em tema → preenche legenda
+  document.getElementById('topics-list').addEventListener('click', e=>{
+    const item = e.target.closest('.topic-item'); if(!item) return;
+    try{
+      const t = JSON.parse(item.getAttribute('data-tema').replace(/&#39;/g,"'"));
+      const legenda = t.legenda_instagram || t.caption || t.conteudo_final?.legenda_final || t.titulo || '';
+      document.getElementById('post-caption').value = legenda;
+      toast('Legenda copiada para o campo de post!','success');
+    }catch{}
+  });
+
+  // Publicar no Instagram
+  document.getElementById('btn-publicar').addEventListener('click', async ()=>{
+    const url     = getPub();
+    const imgUrl  = document.getElementById('post-image-url').value.trim();
+    const caption = document.getElementById('post-caption').value.trim();
+    const feedback = document.getElementById('post-feedback');
+    const btn     = document.getElementById('btn-publicar');
+
+    const errors=[];
+    if(!imgUrl) errors.push('URL da imagem é obrigatória.');
+    if(!caption) errors.push('Legenda é obrigatória.');
+    if(!url) errors.push('Configure a URL do webhook de publicação.');
+    if(errors.length){ feedback.className='col-12 alert alert-warning small'; feedback.innerHTML=errors.join('<br>'); feedback.classList.remove('d-none'); return; }
+
+    btn.disabled=true;
+    const icon=btn.querySelector('i'); if(icon) icon.style.display='none';
+    const sp=document.createElement('span'); sp.className='spinner-border spinner-border-sm'; btn.appendChild(sp);
+    feedback.className='col-12 small text-secondary'; feedback.textContent='Publicando...'; feedback.classList.remove('d-none');
+
+    try{
+      const res = await fetch(url,{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({image_url:imgUrl,caption})});
+      if(res.ok){
+        feedback.className='col-12 alert alert-success small'; feedback.textContent='✓ Post enviado para publicação!';
+        toast('Post publicado!','success');
+        // Save to history
+        const hist = getHist();
+        hist.unshift({ id: uid(), image: imgUrl, caption, status:'done', date: new Date().toLocaleString('pt-BR') });
+        saveHist(hist.slice(0,20));
+        renderHistory();
+        document.getElementById('post-image-url').value='';
+        document.getElementById('post-caption').value='';
+      }else{
+        feedback.className='col-12 alert alert-danger small'; feedback.textContent=`Erro ${res.status} ao publicar.`;
+        toast(`Erro ${res.status}`,'danger');
+      }
+    }catch(err){
+      feedback.className='col-12 alert alert-danger small'; feedback.textContent='Erro de rede/CORS.';
+      toast('Erro de rede','danger'); console.error(err);
+    }finally{
+      btn.disabled=false; if(icon) icon.style.display=''; sp.remove();
+    }
+  });
+
+  // Histórico
+  function renderHistory(){
+    const hist = getHist();
+    const grid = document.getElementById('posts-history-grid');
+    const empty = document.getElementById('posts-history-empty');
+    if(!hist.length){ grid.innerHTML=''; if(empty) grid.appendChild(empty); empty && (empty.style.display=''); return; }
+    if(empty) empty.style.display='none';
+    grid.innerHTML = hist.map(p=>`
+      <div class="post-card">
+        <div class="post-card-head">
+          <span class="post-badge instagram">Instagram</span>
+          <span class="post-badge done">Publicado</span>
+        </div>
+        <div class="post-card-body">
+          ${p.image ? `<div class="mb-2" style="font-size:11px;color:var(--muted);word-break:break-all">${esc(p.image.substring(0,60))}...</div>` : ''}
+          <div class="small" style="line-height:1.5">${esc(p.caption.substring(0,120))}${p.caption.length>120?'…':''}</div>
+          <div class="text-secondary mt-2" style="font-size:11px">${esc(p.date)}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  document.getElementById('btn-clear-history').addEventListener('click', ()=>{
+    saveHist([]); renderHistory(); toast('Histórico limpo.','success');
+  });
+
+  renderHistory();
+  lucide.createIcons();
+
+  /* ===== PIPELINE HUMAN-IN-THE-LOOP ===== */
+  const N8N_STATUS_URL = 'http://localhost:5678/webhook/pipeline/status';
+  const N8N_RESET_URL  = 'http://localhost:5678/webhook/pipeline/reset';
+
+  let pipelineResumeUrl = null;
+  let pipelineEtapaAtual = null;
+  let pipelineItemSelecionado = null;
+
+  const etapaLabels = {
+    'noticias':  { titulo: '📡 Etapa 1 — Notícias encontradas', step: 1, botao: 'Aprovar notícia selecionada' },
+    'angulos':   { titulo: '🎯 Etapa 2 — Ângulos gerados',      step: 2, botao: 'Aprovar ângulo selecionado'  },
+    'carrossel': { titulo: '🎠 Etapa 3 — Carrossel criado',      step: 3, botao: 'Aprovar carrossel'           },
+    'publicar':  { titulo: '📸 Etapa 4 — Pronto para publicar',  step: 4, botao: 'Publicar no Instagram'       },
+  };
+
+  function showPipeline(show){
+    document.getElementById('pipeline-section').style.display = show ? '' : 'none';
+  }
+
+  function setEtapaAtiva(etapa){
+    const steps = document.querySelectorAll('.pipeline-step');
+    const info = etapaLabels[etapa] || {};
+    steps.forEach(s => {
+      const n = parseInt(s.dataset.step);
+      s.classList.remove('active','done');
+      if(n < (info.step||1)) s.classList.add('done');
+      else if(n === (info.step||1)) s.classList.add('active');
+    });
+    document.getElementById('pipeline-etapa-titulo').textContent = info.titulo || 'Pipeline';
+    document.getElementById('btn-aprovar-label').textContent = info.botao || 'Aprovar e Continuar';
+  }
+
+  function renderDadosPipeline(etapa, dados){
+    const area = document.getElementById('pipeline-conteudo');
+    const acoes = document.getElementById('pipeline-acoes');
+    const empty = document.getElementById('pipeline-empty');
+    pipelineItemSelecionado = null;
+
+    if(!dados){ area.innerHTML = `<div class="post-result-area empty" id="pipeline-empty">Sem dados ainda.</div>`; acoes.classList.add('d-none'); return; }
+
+    // Etapa 1 — lista de notícias para selecionar
+    if(etapa === 'noticias'){
+      const lista = Array.isArray(dados) ? dados : (dados.noticias || dados.items || []);
+      if(lista.length){
+        area.innerHTML = lista.map((n,i)=>`
+          <div class="pipeline-item" data-idx="${i}" data-item='${JSON.stringify(n).replace(/'/g,"&#39;")}'>
+            <div class="item-title">${esc(n.titulo || n.title || `Notícia ${i+1}`)}</div>
+            <div class="item-meta">${esc(n.fonte || n.source || '')} ${n.data||n.date ? '· '+esc(n.data||n.date) : ''}</div>
+            <div class="item-meta mt-1">${esc((n.resumo||n.summary||'').substring(0,120))}${(n.resumo||n.summary||'').length>120?'…':''}</div>
+          </div>`).join('');
+        acoes.classList.remove('d-none');
+        document.getElementById('btn-pipeline-aprovar').disabled = true;
+        area.querySelectorAll('.pipeline-item').forEach(el=>{
+          el.addEventListener('click', ()=>{
+            area.querySelectorAll('.pipeline-item').forEach(x=>x.classList.remove('selected'));
+            el.classList.add('selected');
+            try{ pipelineItemSelecionado = JSON.parse(el.getAttribute('data-item').replace(/&#39;/g,"'")); }catch{}
+            document.getElementById('btn-pipeline-aprovar').disabled = false;
+          });
+        });
+      } else {
+        area.innerHTML = `<div class="post-result-area empty">Nenhuma notícia retornada.</div>`;
+        acoes.classList.add('d-none');
+      }
+      return;
+    }
+
+    // Etapa 2 — lista de ângulos para selecionar
+    if(etapa === 'angulos'){
+      const lista = Array.isArray(dados) ? dados : (dados.angulos || dados.angles || []);
+      if(lista.length){
+        area.innerHTML = lista.map((a,i)=>`
+          <div class="pipeline-item" data-idx="${i}" data-item='${JSON.stringify(a).replace(/'/g,"&#39;")}'>
+            <div class="item-title">${esc(a.tipo || a.angulo || a.type || `Ângulo ${i+1}`)}</div>
+            <div class="item-meta">${esc(a.hook || a.premissa || '').substring(0,100)}</div>
+            ${a.formato ? `<div class="item-meta mt-1">Formato: ${esc(a.formato)}</div>` : ''}
+          </div>`).join('');
+        acoes.classList.remove('d-none');
+        document.getElementById('btn-pipeline-aprovar').disabled = true;
+        area.querySelectorAll('.pipeline-item').forEach(el=>{
+          el.addEventListener('click', ()=>{
+            area.querySelectorAll('.pipeline-item').forEach(x=>x.classList.remove('selected'));
+            el.classList.add('selected');
+            try{ pipelineItemSelecionado = JSON.parse(el.getAttribute('data-item').replace(/&#39;/g,"'")); }catch{}
+            document.getElementById('btn-pipeline-aprovar').disabled = false;
+          });
+        });
+      } else {
+        area.innerHTML = `<div class="post-result-area empty">Nenhum ângulo retornado.</div>`;
+        acoes.classList.add('d-none');
+      }
+      return;
+    }
+
+    // Etapa 3 — carrossel para revisar e aprovar
+    if(etapa === 'carrossel'){
+      const slides = dados.slides || dados.carousel || [];
+      const caption = dados.caption || dados.legenda || '';
+      area.innerHTML = `
+        <div class="post-result-area mb-2" style="max-height:260px;overflow-y:auto">
+          ${slides.length ? slides.map((s,i)=>`<div class="mb-2"><b>Slide ${i+1}:</b> ${esc(s.headline||s.titulo||'')} — <span class="text-secondary">${esc((s.supporting_text||s.texto||'').substring(0,80))}</span></div>`).join('') : `<pre class="small mb-0">${esc(JSON.stringify(dados,null,2).substring(0,800))}</pre>`}
+        </div>
+        ${caption ? `<div class="post-result-area small">${esc(caption.substring(0,300))}${caption.length>300?'…':''}</div>` : ''}`;
+      pipelineItemSelecionado = dados;
+      acoes.classList.remove('d-none');
+      document.getElementById('btn-pipeline-aprovar').disabled = false;
+      return;
+    }
+
+    // Etapa 4 — publicar
+    if(etapa === 'publicar'){
+      area.innerHTML = `<div class="post-result-area">✅ Carrossel renderizado e pronto para publicação no Instagram.</div>`;
+      pipelineItemSelecionado = dados;
+      acoes.classList.remove('d-none');
+      document.getElementById('btn-pipeline-aprovar').disabled = false;
+      return;
+    }
+
+    // Fallback genérico
+    area.innerHTML = `<pre class="post-result-area small">${esc(JSON.stringify(dados,null,2).substring(0,600))}</pre>`;
+    pipelineItemSelecionado = dados;
+    acoes.classList.remove('d-none');
+    document.getElementById('btn-pipeline-aprovar').disabled = false;
+  }
+
+  async function verificarPipeline(showToast){
+    const badge = document.getElementById('pipeline-badge');
+    badge.className = 'post-badge processing'; badge.textContent = 'Verificando...';
+    try{
+      const res = await fetch(N8N_STATUS_URL, { method:'GET', mode:'cors' });
+      if(!res.ok){ badge.className='post-badge pending'; badge.textContent='Sem dados'; return; }
+      const data = await res.json();
+      const etapa = data.etapa;
+      const dados = data.dados;
+      pipelineResumeUrl = data.resumeUrl;
+      pipelineEtapaAtual = etapa;
+      if(etapa && pipelineResumeUrl){
+        showPipeline(true);
+        setEtapaAtiva(etapa);
+        renderDadosPipeline(etapa, dados);
+        badge.className='post-badge pending'; badge.textContent='Aguardando aprovação';
+        if(showToast) toast('Pipeline atualizado!','success');
+      } else {
+        badge.className='post-badge done'; badge.textContent='Sem etapas pendentes';
+        if(showToast) toast('Nenhuma etapa pendente no momento.','info');
+      }
+    }catch(err){
+      badge.className='post-badge pending'; badge.textContent='Erro ao verificar';
+      if(showToast) toast('Erro ao verificar pipeline. Verifique se o n8n está rodando.','danger');
+      console.error(err);
+    }
+  }
+
+  document.getElementById('btn-pipeline-verificar').addEventListener('click', ()=> verificarPipeline(true));
+
+  document.getElementById('btn-pipeline-aprovar').addEventListener('click', async ()=>{
+    if(!pipelineResumeUrl){ toast('Sem URL de retomada. Verifique o pipeline.','warning'); return; }
+    const btn = document.getElementById('btn-pipeline-aprovar');
+    btn.disabled = true;
+    const sp = document.createElement('span'); sp.className='spinner-border spinner-border-sm'; btn.appendChild(sp);
+    try{
+      // Monta URL com item selecionado como query param se houver
+      let url = pipelineResumeUrl;
+      if(pipelineItemSelecionado){
+        const sep = url.includes('?') ? '&' : '?';
+        url += sep + 'selecionado=' + encodeURIComponent(JSON.stringify(pipelineItemSelecionado));
+      }
+      await fetch(url, { method:'GET', mode:'cors' });
+      // Reseta estado no n8n
+      await fetch(N8N_RESET_URL, { method:'POST', mode:'cors', headers:{'Content-Type':'application/json'}, body:'{}' });
+      toast('✅ Aprovado! Pipeline continua...','success');
+      document.getElementById('pipeline-badge').className='post-badge processing';
+      document.getElementById('pipeline-badge').textContent='Processando...';
+      document.getElementById('pipeline-acoes').classList.add('d-none');
+      document.getElementById('pipeline-conteudo').innerHTML = `<div class="post-result-area empty">Agente processando a próxima etapa... Clique em <b>Verificar</b> quando pronto.</div>`;
+      pipelineResumeUrl = null; pipelineItemSelecionado = null;
+    }catch(err){
+      toast('Erro ao aprovar. Verifique o n8n.','danger'); console.error(err);
+    }finally{
+      btn.disabled=false; sp.remove();
+    }
+  });
+
+  document.getElementById('btn-pipeline-rejeitar').addEventListener('click', async ()=>{
+    if(!confirm('Cancelar o pipeline? O workflow atual será interrompido.')) return;
+    try{
+      await fetch(N8N_RESET_URL, { method:'POST', mode:'cors', headers:{'Content-Type':'application/json'}, body:'{}' });
+      toast('Pipeline cancelado.','warning');
+      showPipeline(false);
+      pipelineResumeUrl = null; pipelineEtapaAtual = null; pipelineItemSelecionado = null;
+    }catch(err){ console.error(err); }
+  });
+
+  // Verifica automaticamente ao entrar na página de posts
+  document.querySelector('.side-nav a[data-page="posts"]').addEventListener('click', ()=>{
+    setTimeout(()=> verificarPipeline(false), 300);
+  });
+})();
+
+/* ========== CADASTRO PAGE ========== */
+(function initCadastro(){
+  const LS_KEY = 'nd.cadastro.url';
+  const container = document.getElementById('panel-cadastro-page');
+  if(!container) return;
+
+  function getSavedUrl(){ return localStorage.getItem(LS_KEY)||''; }
+  function setSavedUrl(u){ localStorage.setItem(LS_KEY, u); }
+
+  function applyMask(value){
+    const digits = value.replace(/\D/g,'').slice(0,14);
+    if(digits.length <= 11){
+      return digits.replace(/^(\d{3})(\d)/,'$1.$2').replace(/^(\d{3}\.\d{3})(\d)/,'$1.$2').replace(/^(\d{3}\.\d{3}\.\d{3})(\d{1,2})/,'$1-$2');
+    }
+    return digits.replace(/^(\d{2})(\d)/,'$1.$2').replace(/^(\d{2}\.\d{3})(\d)/,'$1.$2').replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/,'$1/$2').replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d{1,2})/,'$1-$2');
+  }
+  function phoneMask(value){
+    const digits = value.replace(/\D/g,'').slice(0,11);
+    if(digits.length <= 10) return digits.replace(/^(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3').replace(/-$/,'');
+    return digits.replace(/^(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3').replace(/-$/,'');
+  }
+
+  function render(){
+    const savedUrl = getSavedUrl();
+    container.innerHTML = `
+      <div class="head" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)">
+        <div class="title">
+          <div class="icon"><i data-lucide="user-plus"></i></div>
+          <span>Cadastro de Cliente</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge-main">App</span>
+          <button class="btn btn-icon" id="cad-cfg-btn" title="Configurar Webhook"><i data-lucide="settings"></i></button>
+        </div>
+      </div>
+      <div style="padding:20px">
+        <div class="row g-2 mb-2">
+          <div class="col-12"><div class="small text-secondary mb-1">Dados do Cliente</div></div>
+          <div class="col-md-5">
+            <label class="form-label small mb-1">Nome <span class="text-danger">*</span></label>
+            <input id="cad-name" type="text" class="form-control form-control-sm" placeholder="Nome completo" autocomplete="off"/>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small mb-1">CPF / CNPJ <span class="text-danger">*</span></label>
+            <input id="cad-cpfcnpj" type="text" class="form-control form-control-sm" placeholder="000.000.000-00" maxlength="18" autocomplete="off"/>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1">Celular</label>
+            <input id="cad-phone" type="text" class="form-control form-control-sm" placeholder="(00) 00000-0000" maxlength="15" autocomplete="off"/>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label small mb-1">E-mail <span class="text-danger">*</span></label>
+            <input id="cad-email" type="email" class="form-control form-control-sm" placeholder="cliente@exemplo.com" autocomplete="off"/>
+          </div>
+          <div class="col-12 mt-1"><div class="divider"></div><div class="small text-secondary mb-1">Dados da Cobrança</div></div>
+          <div class="col-md-4">
+            <label class="form-label small mb-1">Forma de Pagamento <span class="text-danger">*</span></label>
+            <select id="cad-billing" class="form-select form-select-sm">
+              <option value="">Selecione…</option>
+              <option value="BOLETO">BOLETO</option>
+              <option value="PIX">PIX</option>
+              <option value="CREDIT_CARD">CREDIT_CARD</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1">Valor (R$) <span class="text-danger">*</span></label>
+            <input id="cad-value" type="number" class="form-control form-control-sm" placeholder="0.00" min="0.01" step="0.01" autocomplete="off"/>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1">Vencimento <span class="text-danger">*</span></label>
+            <input id="cad-due" type="date" class="form-control form-control-sm" autocomplete="off"/>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button id="cad-submit" class="btn btn-accent btn-pill w-100" type="button">
+              <i data-lucide="send"></i> <span>Cadastrar</span>
+            </button>
+          </div>
+        </div>
+        <div id="cad-feedback" class="small d-none mt-1"></div>
+      </div>`;
+
+    lucide.createIcons();
+
+    document.getElementById('cad-cpfcnpj').addEventListener('input', function(){
+      const cur=this.selectionStart; const prev=this.value;
+      this.value=applyMask(this.value); const diff=this.value.length-prev.length;
+      this.setSelectionRange(cur+diff,cur+diff);
+    });
+    document.getElementById('cad-phone').addEventListener('input', function(){ this.value=phoneMask(this.value); });
+
+    document.getElementById('cad-cfg-btn').addEventListener('click', ()=>{
+      const current=getSavedUrl();
+      openOverlay('Configurar: Cadastro de Cliente', `
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label small">URL do Webhook n8n (Production URL)</label>
+            <input id="cad-url-input" class="form-control" value="${esc(current)}" placeholder="https://sua-instancia.n8n.cloud/webhook/..." />
+            <div class="text-secondary small mt-1">Cole aqui a <b>Production URL</b> do nó Webhook do seu workflow n8n.</div>
+          </div>
+          <div class="col-12">
+            <div class="cfg-help">
+              <details open>
+                <summary><b>Payload enviado ao n8n (POST JSON)</b></summary>
+                <pre>{
+  "name": "Nome do Cliente",
+  "cpfCnpj": "00000000000000",
+  "email": "cliente@exemplo.com",
+  "mobilePhone": "11999999999",
+  "billingType": "BOLETO",
+  "value": 500.00,
+  "dueDate": "2025-12-01"
+}</pre>
+              </details>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-soft btn-sm" data-ovl="close"><i data-lucide="x"></i> Fechar</button>
+            <button type="button" class="btn btn-accent btn-sm" id="cad-url-save"><i data-lucide="save"></i> Salvar URL</button>
+          </div>
+        </div>`);
+      lucide.createIcons();
+      document.getElementById('cad-url-save').addEventListener('click', ()=>{
+        const val=document.getElementById('cad-url-input').value.trim();
+        setSavedUrl(val); toast('URL do webhook salva!','success'); closeOverlay();
+      });
+    });
+
+    document.getElementById('cad-submit').addEventListener('click', async ()=>{
+      const name    = document.getElementById('cad-name').value.trim();
+      const cpfcnpj = document.getElementById('cad-cpfcnpj').value.replace(/\D/g,'');
+      const email   = document.getElementById('cad-email').value.trim();
+      const phone   = document.getElementById('cad-phone').value.replace(/\D/g,'');
+      const billing = document.getElementById('cad-billing').value;
+      const value   = parseFloat(document.getElementById('cad-value').value);
+      const dueDate = document.getElementById('cad-due').value;
+      const feedback= document.getElementById('cad-feedback');
+      const btn     = document.getElementById('cad-submit');
+      const webhookUrl = getSavedUrl();
+
+      const errors=[];
+      if(!name) errors.push('Nome é obrigatório.');
+      if(!cpfcnpj||(cpfcnpj.length!==11&&cpfcnpj.length!==14)) errors.push('CPF (11 dígitos) ou CNPJ (14 dígitos) inválido.');
+      if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('E-mail inválido.');
+      if(!billing) errors.push('Forma de pagamento é obrigatória.');
+      if(isNaN(value)||value<=0) errors.push('Valor deve ser maior que zero.');
+      if(!dueDate) errors.push('Data de vencimento é obrigatória.');
+      if(!webhookUrl) errors.push('Configure a URL do webhook antes de enviar (ícone ⚙).');
+
+      if(errors.length){ feedback.className='small mt-1 alert alert-warning'; feedback.innerHTML=errors.map(e=>`• ${e}`).join('<br>'); feedback.classList.remove('d-none'); return; }
+
+      btn.disabled=true;
+      const iconEl=btn.querySelector('i'); if(iconEl) iconEl.style.display='none';
+      let sp=document.createElement('span'); sp.className='spinner-border spinner-border-sm'; btn.appendChild(sp);
+      feedback.className='small mt-1 text-secondary'; feedback.textContent='Enviando…'; feedback.classList.remove('d-none');
+
+      const payload={name,cpfCnpj:cpfcnpj,email,billingType:billing,value,dueDate};
+      if(phone) payload.mobilePhone=phone;
+
+      try{
+        const res=await fetch(webhookUrl,{method:'POST',headers:{'Content-Type':'application/json'},mode:'cors',body:JSON.stringify(payload)});
+        if(res.ok){
+          feedback.className='small mt-1 alert alert-success'; feedback.textContent='✓ Cliente cadastrado com sucesso!';
+          toast('Cliente cadastrado com sucesso!','success');
+          ['cad-name','cad-cpfcnpj','cad-email','cad-phone','cad-value','cad-due'].forEach(id=>{ document.getElementById(id).value=''; });
+          document.getElementById('cad-billing').value='';
+        }else{
+          const txt=await res.text().catch(()=>'');
+          feedback.className='small mt-1 alert alert-danger'; feedback.innerHTML=`Erro ${res.status}: ${esc(txt||'Resposta inesperada.')}`;
+          toast(`Webhook retornou ${res.status}`,'danger');
+        }
+      }catch(err){
+        feedback.className='small mt-1 alert alert-danger'; feedback.textContent='Erro de rede ou CORS.';
+        toast('Erro de rede/CORS ao enviar cadastro.','danger'); console.error(err);
+      }finally{
+        btn.disabled=false; if(iconEl) iconEl.style.display=''; sp.remove();
+      }
+    });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
